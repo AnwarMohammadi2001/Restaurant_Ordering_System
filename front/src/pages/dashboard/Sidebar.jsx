@@ -1,7 +1,7 @@
-// Sidebar.js (Corrected Role Handling)
+// Sidebar.js (Fully Responsive Version)
 
-import React, { useState } from "react";
-import { FaBuilding, FaSignOutAlt } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaBuilding, FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
 import { useSelector, useDispatch } from "react-redux";
 import { signOutSuccess } from "../../state/userSlice/userSlice";
 import { useNavigate } from "react-router-dom";
@@ -16,10 +16,26 @@ import { MdAddShoppingCart } from "react-icons/md";
 const Sidebar = ({ setActiveComponent }) => {
   const [selectedC, setSelectedC] = useState("home");
   const [activeC, setActiveC] = useState("home");
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentUser } = useSelector((state) => state.user);
   const MySwal = withReactContent(Swal);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+      if (window.innerWidth >= 1024) {
+        setIsMobileOpen(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const handleSignOut = () => {
     MySwal.fire({
@@ -38,13 +54,14 @@ const Sidebar = ({ setActiveComponent }) => {
       }
     });
   };
+
   const AllComponents = [
     { name: "صفحه اصلی", value: "home", icon: <MdOutlineDashboardCustomize /> },
     { name: "سفارشات جدید", value: "Orders", icon: <MdAddShoppingCart /> },
-    { name: "لیست سفارشات ", value: "OrdersList", icon: <FaList /> },
+    { name: "لیست سفارشات", value: "OrdersList", icon: <FaList /> },
     { name: "مدیریت مینیو", value: "MenuManagement", icon: <FaList /> },
     {
-      name: " ثبت کاربر جدید",
+      name: "ثبت کاربر جدید",
       value: "AddUser",
       icon: <LucideUserRoundPlus />,
     },
@@ -69,79 +86,188 @@ const Sidebar = ({ setActiveComponent }) => {
         receptionAllowedValues.includes(component.value)
       );
     } else {
-      // Default fallback for other roles or no role
       accessibleComponents = AllComponents.filter(
         (component) => component.value === "signout"
       );
     }
   } else {
-    // If no user is logged in, show only basic components
     accessibleComponents = AllComponents.filter(
       (component) =>
         component.value === "Orders" || component.value === "signout"
     );
   }
 
+  const handleComponentClick = (componentValue) => {
+    if (componentValue !== "signout") {
+      setActiveComponent(componentValue);
+      setSelectedC(componentValue);
+      setActiveC(componentValue);
+    }
+
+    if (isMobile) {
+      setIsMobileOpen(false);
+    }
+  };
+
+  const handleSignOutClick = () => {
+    if (isMobile) {
+      setIsMobileOpen(false);
+    }
+    handleSignOut();
+  };
+
   return (
-    <div
-      className={`h-full transition-all duration-300 ease-in-out w-64 bg-cyan-800 overflow-y-hidden `}
-    >
-      <header className="flex items-center gap-5 p-5 text-white font-bold text-xl">
-        <div className="flex items-center justify-center p-1 bg-white rounded-full">
-          <img src="/logo.png" alt="Logo" className="h-8 w-8 rounded-full" />
+    <>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div className="lg:hidden fixed top-0 left-0 right-0 bg-gradient-to-r from-cyan-700 to-cyan-800 shadow-lg z-50">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center p-1 bg-white rounded-full">
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  className="h-8 w-8 rounded-full"
+                />
+              </div>
+              <span className="text-lg font-semibold text-white whitespace-nowrap">
+                چاپخانه اکبر
+              </span>
+            </div>
+
+            <button
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              className="p-2 text-white hover:bg-cyan-600 rounded-lg transition-colors duration-200"
+            >
+              {isMobileOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+            </button>
+          </div>
         </div>
+      )}
 
-        <span className="text-lg font-semibold  text-white whitespace-nowrap">
-          چاپخانه اکبر{" "}
-        </span>
-      </header>
+      {/* Mobile Overlay */}
+      {isMobile && isMobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
 
-      <ul className=" mr-1 px-3">
-        {accessibleComponents.map((component, index) => (
-          <li key={index} className="relative group cursor-pointer">
-            {component.value === "signout" ? (
-              <a
-                onClick={handleSignOut}
-                className={`relative flex items-center w-full px-6 py-3 transition-all duration-300  rounded-md
-                ${
-                  activeC === component.value
-                    ? "bg-white text-gray-800"
-                    : "hover:bg-white hover:bg-opacity-20 text-white hover:text-black"
-                }`}
-              >
-                <span className="text-xl">{component.icon}</span>
+      {/* Sidebar */}
+      <div
+        className={`
+          h-full transition-all duration-300 ease-in-out 
+          bg-gradient-to-b from-cyan-800 to-cyan-900 
+          overflow-y-auto
+          ${
+            isMobile
+              ? `fixed top-0 left-0 z-50 transform ${
+                  isMobileOpen ? "translate-x-0" : "-translate-x-full"
+                } w-64`
+              : "w-64 relative"
+          }
+          shadow-xl
+        `}
+      >
+        {/* Desktop Header */}
+        {!isMobile && (
+          <header className="flex items-center gap-5 p-5 text-white font-bold text-xl sticky top-0 bg-cyan-800 z-10">
+            <div className="flex items-center justify-center p-1 bg-white rounded-full">
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="h-8 w-8 rounded-full"
+              />
+            </div>
+            <span className="text-lg font-semibold text-white whitespace-nowrap">
+              چاپخانه اکبر
+            </span>
+          </header>
+        )}
 
-                <span className="mr-4 text-lg font-semibold whitespace-nowrap">
-                  {component.name}
-                </span>
-              </a>
-            ) : (
-              <a
-                onClick={() => {
-                  setActiveComponent(component.value);
-                  setSelectedC(component.value);
-                  setActiveC(component.value);
-                }}
-                onMouseEnter={() => setActiveC(component.value)}
-                onMouseLeave={() => setActiveC(selectedC)}
-                className={`relative flex items-center w-full px-6 py-3 transition-all duration-300 rounded-md
-                ${
-                  activeC === component.value
-                    ? "bg-white text-gray-800"
-                    : "hover:bg-white hover:bg-opacity-20 text-white"
-                }`}
-              >
-                <span className="text-xl">{component.icon}</span>
+        {/* Navigation Items */}
+        <ul className="mr-1 px-3 py-4">
+          {accessibleComponents.map((component, index) => (
+            <li key={index} className="relative group cursor-pointer mb-2">
+              {component.value === "signout" ? (
+                <button
+                  onClick={handleSignOutClick}
+                  className={`relative flex items-center w-full px-6 py-4 transition-all duration-300 rounded-xl
+                    hover:transform hover:scale-105
+                    ${
+                      activeC === component.value
+                        ? "bg-red-500 text-white shadow-lg"
+                        : "hover:bg-red-500 hover:bg-opacity-20 text-white hover:text-white"
+                    }`}
+                >
+                  <span className="text-xl transform transition-transform duration-300 group-hover:scale-110">
+                    {component.icon}
+                  </span>
+                  <span className="mr-4 text-lg font-semibold whitespace-nowrap">
+                    {component.name}
+                  </span>
 
-                <span className="mr-4 text-lg font-semibold whitespace-nowrap">
-                  {component.name}
-                </span>
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 rounded-xl bg-red-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleComponentClick(component.value)}
+                  onMouseEnter={() => setActiveC(component.value)}
+                  onMouseLeave={() => setActiveC(selectedC)}
+                  className={`relative flex items-center w-full px-6 py-4 transition-all duration-300 rounded-xl
+                    hover:transform hover:scale-105
+                    ${
+                      activeC === component.value
+                        ? "bg-white text-cyan-800 shadow-lg font-bold"
+                        : "hover:bg-white hover:bg-opacity-20 text-white hover:text-white"
+                    }`}
+                >
+                  <span className="text-xl transform transition-transform duration-300 group-hover:scale-110">
+                    {component.icon}
+                  </span>
+                  <span className="mr-4 text-lg font-semibold whitespace-nowrap">
+                    {component.name}
+                  </span>
+
+                  {/* Active indicator */}
+                  {activeC === component.value && (
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-white rounded-full" />
+                  )}
+
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        {/* User Info Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-cyan-700 bg-cyan-800">
+          <div className="flex items-center gap-3 text-white">
+            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <span className="text-lg">👤</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm truncate">
+                {currentUser?.name || "کاربر"}
+              </p>
+              <p className="text-cyan-200 text-xs truncate">
+                {currentUser?.role === "admin"
+                  ? "مدیر سیستم"
+                  : currentUser?.role === "reception"
+                  ? "پذیرش"
+                  : "کاربر"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile padding spacer */}
+      {isMobile && <div className="lg:hidden h-16" />}
+    </>
   );
 };
 
