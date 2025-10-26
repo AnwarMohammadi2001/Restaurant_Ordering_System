@@ -1,5 +1,5 @@
 // orderStatsController.js
-import { Order } from "../Models/Orders.js";
+import  Order  from "../Models/Order.js";
 import { Op } from "sequelize";
 
 export const getOrderStatistics = async (req, res) => {

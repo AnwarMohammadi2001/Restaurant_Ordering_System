@@ -2,11 +2,10 @@
 import Dashboard from "./pages/dashboard";
 // import S_Transaction from "./pages/RentManager";
 import Report from "./pages/reports";
-import FinanceComponent from "./pages/Financial";
 import Orders from "./pages/Orders";
-import OrdersList from "./pages/OrdersList";
 import AddUser from "./pages/AddUser";
 import MenuManagement from "./pages/MenuManagement";
+import OrderList from "./pages/OrderList";
 const MainContent = ({ activeComponent }) => {
   const renderContent = () => {
     switch (activeComponent) {
@@ -31,7 +30,7 @@ const MainContent = ({ activeComponent }) => {
       case "Orders":
         return <Orders />;
       case "OrdersList":
-        return <OrdersList />;
+        return <OrderList />;
       case "AddUser":
         return <AddUser />;
 

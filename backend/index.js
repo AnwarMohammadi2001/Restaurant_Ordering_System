@@ -7,9 +7,9 @@ import sequelize from "./dbconnection.js";
 import path, { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
-import OrdersRout from "./routes/OrdersRoute.js";
 import ReportRouter from "./routes/ordersReportRout.js";
 import menuRouter from "./routes/MenuRoute.js";
+import OrderRoute from "./routes/OrdersRoute.js";
 const FRONT_URL=process.env.FRONT_URL
 const port = 8038;
 const app = express();
@@ -56,7 +56,7 @@ app.use("/uploads", express.static(uploadsDirectory));
 
 // Routes
 app.use("/users", userRout);
-app.use("/orders", OrdersRout);
+app.use("/orders", OrderRoute);
 app.use("/report", ReportRouter);
 app.use("/menu", menuRouter);
 

@@ -43,7 +43,7 @@ export const getOrderById = async (id) => {
 // ✅ Create a new order
 export const createOrder = async (orderData) => {
   try {
-    if (!orderData.customer.name || orderData.customer.name.trim() === "") {
+    if (!orderData.customerName || orderData.customerName.trim() === "") {
       showAlert("خطا", "نام مشتری نمی‌تواند خالی باشد", "error");
       return;
     }
