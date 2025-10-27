@@ -131,7 +131,7 @@ const Sidebar = ({ setActiveComponent }) => {
                 />
               </div>
               <span className="text-lg font-semibold text-white whitespace-nowrap">
-                چاپخانه اکبر
+                رستورانت
               </span>
             </div>
 
@@ -148,7 +148,7 @@ const Sidebar = ({ setActiveComponent }) => {
       {/* Mobile Overlay */}
       {isMobile && isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
@@ -180,7 +180,7 @@ const Sidebar = ({ setActiveComponent }) => {
               />
             </div>
             <span className="text-lg font-semibold text-white whitespace-nowrap">
-              چاپخانه اکبر
+              رستورانت
             </span>
           </header>
         )}
@@ -192,7 +192,7 @@ const Sidebar = ({ setActiveComponent }) => {
               {component.value === "signout" ? (
                 <button
                   onClick={handleSignOutClick}
-                  className={`relative flex items-center w-full px-6 py-4 transition-all duration-300 rounded-xl
+                  className={`relative flex items-center w-full px-6 py-3 transition-all duration-300 rounded-xl
                     hover:transform hover:scale-105
                     ${
                       activeC === component.value
@@ -215,7 +215,7 @@ const Sidebar = ({ setActiveComponent }) => {
                   onClick={() => handleComponentClick(component.value)}
                   onMouseEnter={() => setActiveC(component.value)}
                   onMouseLeave={() => setActiveC(selectedC)}
-                  className={`relative flex items-center w-full px-6 py-4 transition-all duration-300 rounded-xl
+                  className={`relative flex items-center w-full px-6 py-3 transition-all duration-300 rounded-xl
                     hover:transform hover:scale-105
                     ${
                       activeC === component.value
