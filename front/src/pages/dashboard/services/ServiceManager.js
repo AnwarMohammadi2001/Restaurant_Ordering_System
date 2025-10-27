@@ -102,13 +102,20 @@ export const toggleDelivery = async (orderId, currentStatus) => {
 };
 export const payRemaining = async (order) => {
   try {
-    const updatedOrder = await axios.patch(`${BASE_URL}/orders/${order.id}`, {
-      recip: order.recip + order.remained,
-      remained: 0,
-    });
-    return updatedOrder.data; // <-- return updated order
+    console.log(order);
+    
+    const payload = {
+      recip: order.recip + order.remained, // add remaining to received
+      total: order.total, // optional: keep total consistent
+    };
+
+    const response = await axios.patch(
+      `${BASE_URL}/orders/pay/${order.id}`,
+      payload
+    );
+    return response.data; // return updated order
   } catch (err) {
-    console.error("Error paying remaining:", err);
+    console.error("❌ Error paying remaining:", err);
     throw err;
   }
 };

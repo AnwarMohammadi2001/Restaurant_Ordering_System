@@ -9,6 +9,7 @@ const Orders = () => {
   const [customerName, setCustomerName] = useState("");
   const [orders, setOrders] = useState([
     {
+      id: Date.now(), // Add unique ID
       category: "",
       menuItemId: "",
       menuItem: "",
@@ -39,25 +40,33 @@ const Orders = () => {
     fetchMenu();
   }, []);
 
-  // Handle order changes
+  // Handle order changes - FIXED VERSION
   const handleOrderChange = (index, e) => {
     const { name, value } = e.target;
-    const updatedOrders = [...orders];
-    updatedOrders[index][name] = value;
+    
+    setOrders(prevOrders => {
+      const updatedOrders = [...prevOrders];
+      updatedOrders[index] = {
+        ...updatedOrders[index],
+        [name]: value
+      };
 
-    if (name === "category") {
-      updatedOrders[index].menuItem = "";
-      updatedOrders[index].price = "";
-    }
+      if (name === "category") {
+        updatedOrders[index].menuItem = "";
+        updatedOrders[index].price = "";
+        updatedOrders[index].menuItemId = "";
+      }
 
-    setOrders(updatedOrders);
+      return updatedOrders;
+    });
   };
 
-  // Add order line
+  // Add order line - FIXED VERSION
   const handleAddOrder = () => {
-    setOrders([
-      ...orders,
+    setOrders(prevOrders => [
+      ...prevOrders,
       {
+        id: Date.now(), // Add unique ID
         category: "",
         menuItemId: "",
         menuItem: "",
@@ -68,10 +77,10 @@ const Orders = () => {
     ]);
   };
 
-  // Remove order line
+  // Remove order line - FIXED VERSION
   const handleRemoveOrder = (index) => {
     if (orders.length > 1) {
-      setOrders(orders.filter((_, i) => i !== index));
+      setOrders(prevOrders => prevOrders.filter((_, i) => i !== index));
     }
   };
 
@@ -88,6 +97,7 @@ const Orders = () => {
       setCustomerName("");
       setOrders([
         {
+          id: Date.now(),
           category: "",
           menuItemId: "",
           menuItem: "",
@@ -103,7 +113,7 @@ const Orders = () => {
       // Show success message
       const submitBtn = e.target.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
-      submitBtn.textContent = "✓ Order Created!";
+      submitBtn.textContent = "✓ سفارش ایجاد شد!";
       submitBtn.classList.add("bg-emerald-600");
 
       setTimeout(() => {
@@ -114,7 +124,7 @@ const Orders = () => {
       console.error(err);
       const submitBtn = e.target.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
-      submitBtn.textContent = "❌ Failed - Try Again";
+      submitBtn.textContent = "❌ خطا - دوباره تلاش کنید";
       submitBtn.classList.add("bg-rose-600");
 
       setTimeout(() => {
@@ -152,7 +162,7 @@ const Orders = () => {
                     : "text-slate-600 hover:bg-white/50"
                 }`}
               >
-                New Order
+                سفارش جدید
               </button>
               <button
                 onClick={() => setActiveTab("orders")}
@@ -162,7 +172,7 @@ const Orders = () => {
                     : "text-slate-600 hover:bg-white/50"
                 }`}
               >
-                Orders
+                لیست سفارش‌ها
               </button>
             </div>
           </div>
@@ -171,7 +181,7 @@ const Orders = () => {
         <div className="">
           {/* Order Creation Card - Hidden on mobile when viewing orders */}
           <div
-            className={`bg-white  overflow-hidden border border-white/20 backdrop-blur-sm transform transition-all duration-500 ${
+            className={`bg-white overflow-hidden border border-white/20 backdrop-blur-sm transform transition-all duration-500 ${
               activeTab === "create" ? "block" : "hidden lg:block"
             } ${
               activeTab === "create"
@@ -188,9 +198,9 @@ const Orders = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl md:text-3xl font-bold text-white">
-                      Create Order
+                      ایجاد سفارش
                     </h2>
-                    <p className="text-blue-100">Add new customer order</p>
+                    <p className="text-blue-100">سفارش جدید مشتری را اضافه کنید</p>
                   </div>
                 </div>
               </div>
@@ -199,32 +209,31 @@ const Orders = () => {
             <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
               {/* Customer Name */}
               <div className="space-y-3">
-                <label className=" text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  Customer Name
+                  نام مشتری
                 </label>
-                <div className="relative  group">
+                <div className="relative group">
                   <input
                     type="text"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
+                    placeholder="نام مشتری را وارد کنید"
                     className="w-full border border-slate-200 rounded-sm focus:outline-none px-5 py-4 focus:ring-1 focus:ring-cyan-800 transition-all duration-300 bg-gray-200 backdrop-blur-sm group-hover:border-cyan-800"
                     required
                   />
-                
                 </div>
               </div>
 
               {/* Order Items */}
-              <div className="space-y-5 ">
+              <div className="space-y-5">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                     <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                    Order Items
+                    آیتم‌های سفارش
                   </h3>
                   <span className="text-sm font-medium bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
-                    {orders.length} item{orders.length !== 1 ? "s" : ""}
+                    {orders.length} آیتم
                   </span>
                 </div>
 
@@ -235,7 +244,7 @@ const Orders = () => {
 
                   return (
                     <div
-                      key={index}
+                      key={order.id}
                       className="border border-slate-200 rounded-md p-2 space-y-5 bg-gradient-to-br from-white to-slate-50/50 relative transition-all duration-300 hover:shadow-lg hover:border-slate-300 group"
                     >
                       {/* Remove button */}
@@ -253,7 +262,7 @@ const Orders = () => {
                         {/* Category */}
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-slate-700">
-                            Category
+                            دسته‌بندی
                           </label>
                           <select
                             name="category"
@@ -262,7 +271,7 @@ const Orders = () => {
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:ring-3 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white"
                             required
                           >
-                            <option value="">Select Category</option>
+                            <option value="">انتخاب دسته</option>
                             {categories.map((cat, i) => (
                               <option key={i} value={cat}>
                                 {cat}
@@ -274,7 +283,7 @@ const Orders = () => {
                         {/* Menu Item */}
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-slate-700">
-                            Menu Item
+                            آیتم منو
                           </label>
                           <select
                             name="menuItem"
@@ -284,28 +293,36 @@ const Orders = () => {
                               const selected = menuItems.find(
                                 (item) => item.id.toString() === id
                               );
-                              const updatedOrders = [...orders];
-                              updatedOrders[index].menuItem = selected.name;
-                              updatedOrders[index].price = selected.price;
-                              updatedOrders[index].menuItemId = selected.id;
-                              setOrders(updatedOrders);
+                              if (selected) {
+                                setOrders(prevOrders => {
+                                  const updatedOrders = [...prevOrders];
+                                  updatedOrders[index] = {
+                                    ...updatedOrders[index],
+                                    menuItem: selected.name,
+                                    price: selected.price,
+                                    menuItemId: selected.id.toString(),
+                                  };
+                                  return updatedOrders;
+                                });
+                              }
                             }}
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:ring-3 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
                             required
                             disabled={!order.category}
                           >
-                            <option value="">Select Item</option>
+                            <option value="">انتخاب آیتم</option>
                             {filteredMenuItems.map((item) => (
                               <option key={item.id} value={item.id}>
-                                {item.name} — ${item.price}
+                                {item.name} — {item.price} افغانی
                               </option>
                             ))}
                           </select>
                         </div>
-                        <div className=" md:flex items-center gap-x-1 md:col-span-2"> 
+
+                        <div className="md:flex items-center gap-x-1 md:col-span-2">
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-slate-700">
-                              Price AF
+                              قیمت (افغانی)
                             </label>
                             <div className="relative">
                               <input
@@ -321,7 +338,7 @@ const Orders = () => {
                               />
                               <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                                 <span className="text-slate-400 text-sm font-medium">
-                                  AF
+                                  AFN
                                 </span>
                               </div>
                             </div>
@@ -330,7 +347,7 @@ const Orders = () => {
                           {/* Amount */}
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-slate-700">
-                              Quantity
+                              تعداد
                             </label>
                             <div className="relative">
                               <input
@@ -354,27 +371,27 @@ const Orders = () => {
                           {/* Line Total */}
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-slate-700">
-                              Line Total
+                              مجموع خط
                             </label>
                             <div className="w-full border-2 border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3 text-emerald-700 font-bold text-center">
-                              $
                               {(
                                 (parseFloat(order.price) || 0) *
                                 (parseInt(order.amount) || 0)
-                              ).toFixed(2)}
+                              ).toFixed(2)} افغانی
                             </div>
                           </div>
                         </div>
+
                         {/* Note */}
                         <div className="space-y-2 md:col-span-2">
                           <label className="block text-sm font-medium text-slate-700">
-                            Line Total
+                            یادداشت
                           </label>
                           <textarea
                             name="note"
                             value={order.note}
                             onChange={(e) => handleOrderChange(index, e)}
-                            placeholder="Any notes..."
+                            placeholder="یادداشت‌ها..."
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:ring-3 min-h-[20px] max-h-[50px] focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white resize-none"
                             rows="2"
                           ></textarea>
@@ -384,6 +401,7 @@ const Orders = () => {
                   );
                 })}
               </div>
+
               <button
                 type="button"
                 onClick={handleAddOrder}
@@ -392,7 +410,7 @@ const Orders = () => {
                 <span className="text-xl group-hover:scale-110 transition-transform">
                   +
                 </span>
-                Add Another Item
+                افزودن آیتم دیگر
               </button>
 
               {/* Order Summary */}
@@ -400,14 +418,14 @@ const Orders = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <span className="text-lg font-bold text-slate-800">
-                      Order Total:
+                      مجموع سفارش:
                     </span>
                     <p className="text-sm text-slate-600">
-                      {orders.length} items
+                      {orders.length} آیتم
                     </p>
                   </div>
                   <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    ${calculateTotal()}
+                    {calculateTotal()} افغانی
                   </span>
                 </div>
               </div>
@@ -422,10 +440,10 @@ const Orders = () => {
                   {isSubmitting ? (
                     <div className="flex items-center justify-center gap-3">
                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing Order...
+                      در حال پردازش سفارش...
                     </div>
                   ) : (
-                    "Submit Order"
+                    "ثبت سفارش"
                   )}
                 </button>
               </div>
@@ -433,11 +451,8 @@ const Orders = () => {
           </div>
 
           {/* Order List - Hidden on mobile when creating order */}
-          
-        </div>
-      </div>
-      <div
-            className={`bg-white  overflow-hidden border border-white/20 backdrop-blur-sm transform transition-all duration-500 ${
+          <div
+            className={`bg-white overflow-hidden border border-white/20 backdrop-blur-sm transform transition-all duration-500 ${
               activeTab === "orders" ? "block" : "hidden lg:block"
             } ${
               activeTab === "orders"
@@ -447,18 +462,14 @@ const Orders = () => {
           >
             {/* Card Header */}
             <div className="relative bg-cyan-800 p-6 md:p-4">
-          
-
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
                     <span className="text-2xl">📋</span>
                   </div>
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white">
-                      Recent Orders
-                    </h2>
-                    <p className="text-emerald-100">View all customer orders</p>
+                    <h2 className="text-2xl font-bold text-white">لیست سفارش‌ها</h2>
+                    <p className="text-blue-100">نمایش آخرین سفارش‌های مشتریان</p>
                   </div>
                 </div>
               </div>
@@ -468,6 +479,8 @@ const Orders = () => {
               <OrderList refresh={refreshOrders} />
             </div>
           </div>
+        </div>
+      </div>
     </div>
   );
 };

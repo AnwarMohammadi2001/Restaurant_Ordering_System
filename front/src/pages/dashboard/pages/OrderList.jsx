@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { payRemaining, updateOrderPayment } from "../services/ServiceManager";
+import Swal from "sweetalert2";
 
 const OrderList = ({ refresh }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
   useEffect(() => {
@@ -26,6 +30,84 @@ const OrderList = ({ refresh }) => {
 
   const toggleOrder = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  };
+
+  const handlePayRemaining = async (order) => {
+    try {
+      const confirm = await Swal.fire({
+        title: "آیا مطمئن هستید؟",
+        text: "آیا می‌خواهید باقی‌مانده این سفارش پرداخت شود؟",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "بله، پرداخت کن",
+        cancelButtonText: "لغو",
+      });
+
+      if (confirm.isConfirmed) {
+        const updated = await payRemaining(order);
+        Swal.fire("موفق!", "سفارش به طور کامل پرداخت شد.", "success");
+        console.log("Updated order:", updated);
+        // Refresh orders list
+        const res = await axios.get(`${BASE_URL}/orders`);
+        setOrders(res.data);
+      }
+    } catch (err) {
+      Swal.fire("خطا", "پرداخت باقی‌مانده انجام نشد.", "error");
+    }
+  };
+
+  const handleEditPayment = (order) => {
+    setEditingPayment(order.id);
+    setPaymentAmount(order.recip.toString());
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPayment(null);
+    setPaymentAmount("");
+  };
+
+  const handleSavePayment = async (order) => {
+    if (!paymentAmount || isNaN(parseFloat(paymentAmount))) {
+      Swal.fire("خطا", "لطفا مبلغ معتبر وارد کنید", "error");
+      return;
+    }
+
+    const newRecip = parseFloat(paymentAmount);
+    const total = parseFloat(order.total);
+
+    if (newRecip < 0) {
+      Swal.fire("خطا", "مبلغ نمی‌تواند منفی باشد", "error");
+      return;
+    }
+
+    if (newRecip > total) {
+      Swal.fire("خطا", "مبلغ دریافتی نمی‌تواند بیشتر از مبلغ کل باشد", "error");
+      return;
+    }
+
+    try {
+      const updatedOrder = await updateOrderPayment(order.id, newRecip);
+      Swal.fire("موفق!", "مبلغ دریافتی با موفقیت به‌روزرسانی شد", "success");
+
+      // Update local state
+      setOrders((prevOrders) =>
+        prevOrders.map((o) =>
+          o.id === order.id
+            ? { ...o, recip: newRecip, remained: total - newRecip }
+            : o
+        )
+      );
+
+      setEditingPayment(null);
+      setPaymentAmount("");
+    } catch (err) {
+      Swal.fire("خطا", "به‌روزرسانی مبلغ دریافتی انجام نشد", "error");
+    }
+  };
+
+  const handlePaymentAmountChange = (e, order) => {
+    const value = e.target.value;
+    setPaymentAmount(value);
   };
 
   if (loading)
@@ -285,15 +367,104 @@ const OrderList = ({ refresh }) => {
 
                   {/* Order Summary */}
                   <div className="mt-6 pt-4 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span className="text-lg">💰</span>
-                        <span className="font-medium">مبلغ نهایی سفارش:</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="text-center p-4 bg-blue-50 rounded-xl">
+                        <p className="text-sm text-gray-600 mb-2">
+                          مبلغ کل سفارش
+                        </p>
+                        <p className="text-2xl font-bold text-blue-700">
+                          {order.total} افغانی
+                        </p>
                       </div>
-                      <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        {order.total} افغانی
+
+                      <div className="text-center p-4 bg-green-50 rounded-xl">
+                        <p className="text-sm text-gray-600 mb-2">
+                          مبلغ دریافتی
+                        </p>
+                        {editingPayment === order.id ? (
+                          <div className="space-y-2">
+                            <input
+                              type="number"
+                              value={paymentAmount}
+                              onChange={(e) =>
+                                handlePaymentAmountChange(e, order)
+                              }
+                              className="w-full px-3 py-2 border border-green-300 rounded-lg text-center text-lg font-bold text-green-700"
+                              placeholder="مبلغ دریافتی"
+                              step="0.01"
+                              min="0"
+                              max={order.total}
+                            />
+                            <div className="flex gap-2 justify-center">
+                              <button
+                                onClick={() => handleSavePayment(order)}
+                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                              >
+                                ذخیره
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
+                              >
+                                لغو
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-2xl font-bold text-green-700">
+                              {order.recip} افغانی
+                            </p>
+                            <button
+                              onClick={() => handleEditPayment(order)}
+                              className="mt-2 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                            >
+                              ویرایش
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-center p-4 bg-red-50 rounded-xl">
+                        <p className="text-sm text-gray-600 mb-2">
+                          مبلغ باقی‌مانده
+                        </p>
+                        <p className="text-2xl font-bold text-red-600">
+                          {order.remained} افغانی
+                        </p>
                       </div>
                     </div>
+
+                    {/* Action Buttons */}
+                    {order.remained > 0 && (
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => handlePayRemaining(order)}
+                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                        >
+                          <span>💳</span>
+                          پرداخت کامل باقی‌مانده
+                        </button>
+
+                        {editingPayment !== order.id && (
+                          <button
+                            onClick={() => handleEditPayment(order)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                          >
+                            <span>✏️</span>
+                            ویرایش مبلغ دریافتی
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {order.remained === 0 && (
+                      <div className="text-center p-4 bg-emerald-100 rounded-xl border border-emerald-200">
+                        <p className="text-emerald-700 font-semibold text-lg">
+                          ✅ این سفارش به طور کامل پرداخت شده است
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

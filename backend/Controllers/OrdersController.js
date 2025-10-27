@@ -4,8 +4,13 @@ export const createOrder = async (req, res) => {
   try {
     const { customerName, orders } = req.body;
 
-    // 1️⃣ Create the main order with total = 0
-    const order = await Order.create({ customerName });
+    // 1️⃣ Create the main order with total = 0, recip = 0, remained = 0
+    const order = await Order.create({
+      customerName,
+      total: 0,
+      recip: 0,
+      remained: 0,
+    });
 
     // 2️⃣ Prepare the order items
     const itemsData = orders.map((item) => ({
@@ -27,15 +32,19 @@ export const createOrder = async (req, res) => {
       0
     );
 
-    // 5️⃣ Update the order with total
-    await order.update({ total });
+    // 5️⃣ Calculate remained (total - recip)
+    const recip = 0; // default received amount
+    const remained = total - recip;
 
-    // 6️⃣ Fetch the order with items
+    // 6️⃣ Update the order with total, recip, and remained
+    await order.update({ total, recip, remained });
+
+    // 7️⃣ Fetch the order with items
     const result = await Order.findByPk(order.id, {
       include: [{ model: OrderItem, as: "items" }],
     });
 
-    res.status(201).json(result); // total is now stored in DB and included
+    res.status(201).json(result);
   } catch (err) {
     console.error(err);
     res
@@ -67,5 +76,33 @@ export const getOrderById = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch order" });
+  }
+};
+
+export const updateOrderPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { total, recip } = req.body;
+console.log(id);
+
+    const order = await Order.findByPk(id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    // Calculate remained automatically
+    const remained = (total ?? order.total) - (recip ?? order.recip);
+
+    // Update the order
+    await order.update({
+      total: total ?? order.total,
+      recip: recip ?? order.recip,
+      remained,
+    });
+
+    res.status(200).json({ message: "Order updated successfully", order });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ message: "Failed to update order", error: err.message });
   }
 };
