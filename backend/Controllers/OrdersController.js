@@ -81,15 +81,26 @@ export const getOrderById = async (req, res) => {
 
 export const updateOrderPayment = async (req, res) => {
   try {
+    // Extract id and body values
     const { id } = req.params;
-    const { total, recip } = req.body;
-console.log(id);
+    const { recip, total } = req.body;
 
+    // Log received data
+    console.log("🧾 Payment update called:");
+    console.log("➡️ Order ID:", id);
+    console.log("➡️ New Recip Value:", recip);
+    console.log("➡️ Provided Total:", total);
+
+    // Find the order by ID
     const order = await Order.findByPk(id);
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      console.log("❌ Order not found for ID:", id);
+      return res.status(404).json({ message: "Order not found" });
+    }
 
     // Calculate remained automatically
     const remained = (total ?? order.total) - (recip ?? order.recip);
+    console.log("🧮 Calculated Remained:", remained);
 
     // Update the order
     await order.update({
@@ -98,11 +109,14 @@ console.log(id);
       remained,
     });
 
+    console.log("✅ Order updated successfully!");
     res.status(200).json({ message: "Order updated successfully", order });
   } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ message: "Failed to update order", error: err.message });
+    console.error("🔥 Error updating order payment:", err);
+    res.status(500).json({
+      message: "Failed to update order",
+      error: err.message,
+    });
   }
 };
+

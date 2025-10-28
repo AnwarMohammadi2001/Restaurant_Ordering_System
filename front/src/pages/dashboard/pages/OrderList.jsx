@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { payRemaining, updateOrderPayment } from "../services/ServiceManager";
+import { payRemaining } from "../services/ServiceManager";
 import Swal from "sweetalert2";
+import { updateOrderPayment } from "../services/ServiceManager";
 
 const OrderList = ({ refresh }) => {
   const [orders, setOrders] = useState([]);
@@ -458,7 +459,7 @@ const OrderList = ({ refresh }) => {
                       </div>
                     )}
 
-                    {order.remained === 0 && (
+                    {order.remained == 0 && (
                       <div className="text-center p-4 bg-emerald-100 rounded-xl border border-emerald-200">
                         <p className="text-emerald-700 font-semibold text-lg">
                           ✅ این سفارش به طور کامل پرداخت شده است
