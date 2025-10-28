@@ -141,6 +141,7 @@ const DashboardHome = () => {
   }
 
   const {
+    totalIncome,
     totalRemainedMoney,
     deliveredOrdersCount,
     notDeliveredOrdersCount,
@@ -156,7 +157,7 @@ const DashboardHome = () => {
   const statsCards = [
     {
       title: "مجموع پول همه سفارشات",
-      value: formatCurrency(totalRemainedMoney + totalReceivedMoney),
+      value: formatCurrency(totalIncome),
       icon: FaMoneyBillWave,
       color: "bg-cyan-800",
       description: "کل پول از سفارشات",
@@ -170,7 +171,7 @@ const DashboardHome = () => {
     },
     {
       title: "مجموع پول باقیمانده",
-      value: formatCurrency(totalRemainedMoney),
+      value: formatCurrency(totalPendingMoney),
       icon: FaMoneyBillWave,
       color: "bg-cyan-800",
       description: "کل مبلغ باقیمانده از سفارشات",

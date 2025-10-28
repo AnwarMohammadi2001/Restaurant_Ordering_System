@@ -120,3 +120,78 @@ export const updateOrderPayment = async (req, res) => {
   }
 };
 
+export const updateOrderDeliveryStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isDelivered } = req.body;
+
+    // Basic validation
+    if (typeof isDelivered !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid value for isDelivered. It must be true or false.",
+      });
+    }
+
+    // Find the order
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    // Update the delivery status
+    order.isDelivered = isDelivered;
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Order marked as ${
+        isDelivered ? "delivered" : "not delivered"
+      }.`,
+      data: order,
+    });
+  } catch (error) {
+    console.error("Error updating order delivery status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating order delivery status.",
+      error: error.message,
+    });
+  }
+};
+export const markOrderAsPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the order
+    const order = await Order.findByPk(id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Calculate the new values
+    const total = parseFloat(order.total) || 0;
+
+    // Update recip and remained
+    await order.update({
+      recip: total,
+      remained: 0,
+      // Optionally also mark as delivered:
+      // isDelivered: true
+    });
+
+    res.status(200).json({
+      message: "Order marked as fully paid successfully",
+      order,
+    });
+  } catch (error) {
+    console.error("Error in markOrderAsPaid:", error);
+    res.status(500).json({
+      message: "Failed to mark order as fully paid",
+      error: error.message,
+    });
+  }
+};

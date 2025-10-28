@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { payRemaining } from "../services/ServiceManager";
+import {
+  markOrderAsFullyPaid,
+  payRemaining,
+  updateOrderDeliveryStatus,
+} from "../services/ServiceManager";
 import Swal from "sweetalert2";
 import { updateOrderPayment } from "../services/ServiceManager";
 
@@ -11,6 +15,7 @@ const OrderList = ({ refresh }) => {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [editingPayment, setEditingPayment] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
   useEffect(() => {
@@ -33,8 +38,14 @@ const OrderList = ({ refresh }) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
   };
 
-  const handlePayRemaining = async (order) => {
+  const handleMarkAsFullyPaid = async (orderId) => {
+    setUpdatingOrderId(orderId);
+
     try {
+      // Find the order to get the total amount
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
+
       const confirm = await Swal.fire({
         title: "آیا مطمئن هستید؟",
         text: "آیا می‌خواهید باقی‌مانده این سفارش پرداخت شود؟",
@@ -44,16 +55,49 @@ const OrderList = ({ refresh }) => {
         cancelButtonText: "لغو",
       });
 
-      if (confirm.isConfirmed) {
-        const updated = await payRemaining(order);
-        Swal.fire("موفق!", "سفارش به طور کامل پرداخت شد.", "success");
-        console.log("Updated order:", updated);
-        // Refresh orders list
-        const res = await axios.get(`${BASE_URL}/orders`);
-        setOrders(res.data);
+      if (!confirm.isConfirmed) {
+        setUpdatingOrderId(null);
+        return;
       }
+
+      // Update local state immediately for better UX
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId
+            ? {
+                ...order,
+                recip: order.total,
+                remained: 0,
+              }
+            : order
+        )
+      );
+
+      // Call the API to update on server
+      await markOrderAsFullyPaid(orderId);
+
+      // Show success message
+      Swal.fire("موفق!", "سفارش به طور کامل پرداخت شد.", "success");
     } catch (err) {
+      // Revert local state if API call fails
+      const order = orders.find((o) => o.id === orderId);
+      if (order) {
+        setOrders((prevOrders) =>
+          prevOrders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  recip: o.recip, // Keep original recip value
+                  remained: o.remained, // Keep original remained value
+                }
+              : o
+          )
+        );
+      }
+
       Swal.fire("خطا", "پرداخت باقی‌مانده انجام نشد.", "error");
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -109,6 +153,40 @@ const OrderList = ({ refresh }) => {
   const handlePaymentAmountChange = (e, order) => {
     const value = e.target.value;
     setPaymentAmount(value);
+  };
+
+  const handleDeliveryStatusChange = async (orderId, newStatus) => {
+    setUpdatingOrderId(orderId);
+
+    try {
+      // Update local state immediately for better UX
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId ? { ...order, isDelivered: newStatus } : order
+        )
+      );
+
+      // Call the API to update on server
+      await updateOrderDeliveryStatus(orderId, newStatus);
+
+      // Show success message
+      Swal.fire(
+        "موفق!",
+        `سفارش ${newStatus ? "تحویل داده شد" : "به حالت انتظار بازگشت"}.`,
+        "success"
+      );
+    } catch (err) {
+      // Revert local state if API call fails
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId ? { ...order, isDelivered: !newStatus } : order
+        )
+      );
+
+      Swal.fire("خطا", `تغییر وضعیت تحویل انجام نشد.`, "error");
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   if (loading)
@@ -188,7 +266,7 @@ const OrderList = ({ refresh }) => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 md:gap-6">
-                  <div className="text-center">
+                  <div className="text-center space-y-2">
                     <p className="text-sm text-gray-500">وضعیت تحویل</p>
                     <div
                       className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
@@ -209,6 +287,32 @@ const OrderList = ({ refresh }) => {
                         </>
                       )}
                     </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering the parent click
+                        handleDeliveryStatusChange(
+                          order.id,
+                          !order.isDelivered
+                        );
+                      }}
+                      disabled={updatingOrderId === order.id}
+                      className={`mt-2 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-300 ${
+                        order.isDelivered
+                          ? "bg-red-100 text-red-700 hover:bg-red-200"
+                          : "bg-green-100 text-green-700 hover:bg-green-200"
+                      } ${
+                        updatingOrderId === order.id
+                          ? "opacity-60 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      {updatingOrderId === order.id
+                        ? "در حال بروزرسانی..."
+                        : order.isDelivered
+                        ? "لغو تحویل"
+                        : "تأیید تحویل"}
+                    </button>
                   </div>
 
                   <div className="text-center">
@@ -440,11 +544,18 @@ const OrderList = ({ refresh }) => {
                     {order.remained > 0 && (
                       <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 border-t border-gray-200">
                         <button
-                          onClick={() => handlePayRemaining(order)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                          onClick={() => handleMarkAsFullyPaid(order.id)}
+                          disabled={updatingOrderId === order.id}
+                          className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2 ${
+                            updatingOrderId === order.id
+                              ? "opacity-60 cursor-not-allowed"
+                              : ""
+                          }`}
                         >
                           <span>💳</span>
-                          پرداخت کامل باقی‌مانده
+                          {updatingOrderId === order.id
+                            ? "در حال پرداخت..."
+                            : "پرداخت کامل باقی‌مانده"}
                         </button>
 
                         {editingPayment !== order.id && (

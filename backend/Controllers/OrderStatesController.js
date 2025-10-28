@@ -1,12 +1,12 @@
-// orderStatsController.js
-import  Order  from "../Models/Order.js";
-import { Op } from "sequelize";
+import Order from "../Models/Order.js";
+import { Op, fn, col, literal } from "sequelize";
 
+/**
+ * Basic Order Statistics (manual calculation)
+ */
 export const getOrderStatistics = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-
-    // Build where condition for Sequelize
     const whereCondition = {};
 
     if (startDate && endDate) {
@@ -14,29 +14,30 @@ export const getOrderStatistics = async (req, res) => {
         [Op.between]: [new Date(startDate), new Date(endDate)],
       };
     } else if (startDate) {
-      whereCondition.createdAt = {
-        [Op.gte]: new Date(startDate),
-      };
+      whereCondition.createdAt = { [Op.gte]: new Date(startDate) };
     } else if (endDate) {
-      whereCondition.createdAt = {
-        [Op.lte]: new Date(endDate),
-      };
+      whereCondition.createdAt = { [Op.lte]: new Date(endDate) };
     }
 
-    // Get all orders based on filter
     const orders = await Order.findAll({
       where: whereCondition,
-      attributes: ["id", "total", "isDelivered", "createdAt"],
+      attributes: [
+        "id",
+        "total",
+        "recip",
+        "remained",
+        "isDelivered",
+        "createdAt",
+      ],
     });
 
-    // Calculate statistics manually
     const statistics = {
-      totalRemainedMoney: 0,
+      totalOrdersCount: orders.length,
+      totalIncome: 0, // total of all orders
+      totalReceivedMoney: 0, // sum of recip
+      totalPendingMoney: 0, // sum of remained
       deliveredOrdersCount: 0,
       notDeliveredOrdersCount: 0,
-      totalReceivedMoney: 0,
-      totalPendingMoney: 0,
-      totalOrdersCount: orders.length,
       timeRange: {
         startDate: startDate || null,
         endDate: endDate || null,
@@ -46,21 +47,18 @@ export const getOrderStatistics = async (req, res) => {
 
     orders.forEach((order) => {
       const total = parseFloat(order.total) || 0;
-      statistics.totalRemainedMoney += total;
+      const recip = parseFloat(order.recip) || 0;
+      const remained = parseFloat(order.remained) || 0;
 
-      if (order.isDelivered) {
-        statistics.deliveredOrdersCount++;
-        statistics.totalReceivedMoney += total;
-      } else {
-        statistics.notDeliveredOrdersCount++;
-        statistics.totalPendingMoney += total;
-      }
+      statistics.totalIncome += total;
+      statistics.totalReceivedMoney += recip;
+      statistics.totalPendingMoney += remained;
+
+      if (order.isDelivered) statistics.deliveredOrdersCount++;
+      else statistics.notDeliveredOrdersCount++;
     });
 
-    res.status(200).json({
-      success: true,
-      data: statistics,
-    });
+    res.status(200).json({ success: true, data: statistics });
   } catch (error) {
     console.error("Error in getOrderStatistics:", error);
     res.status(500).json({
@@ -71,34 +69,28 @@ export const getOrderStatistics = async (req, res) => {
   }
 };
 
-// Alternative version using Sequelize aggregate functions (more efficient)
 export const getOrderStatisticsSequelize = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const { fn, col, where, literal } = Order.sequelize.Sequelize;
-
-    // Build where condition
     const whereCondition = {};
+
     if (startDate && endDate) {
       whereCondition.createdAt = {
         [Op.between]: [new Date(startDate), new Date(endDate)],
       };
     } else if (startDate) {
-      whereCondition.createdAt = {
-        [Op.gte]: new Date(startDate),
-      };
+      whereCondition.createdAt = { [Op.gte]: new Date(startDate) };
     } else if (endDate) {
-      whereCondition.createdAt = {
-        [Op.lte]: new Date(endDate),
-      };
+      whereCondition.createdAt = { [Op.lte]: new Date(endDate) };
     }
 
-    // Get statistics using Sequelize aggregation
     const stats = await Order.findAll({
       where: whereCondition,
       attributes: [
-        [fn("SUM", col("total")), "totalRemainedMoney"],
         [fn("COUNT", col("id")), "totalOrdersCount"],
+        [fn("SUM", col("total")), "totalIncome"],
+        [fn("SUM", col("recip")), "totalReceivedMoney"],
+        [fn("SUM", col("remained")), "totalPendingMoney"],
         [
           literal(`SUM(CASE WHEN isDelivered = true THEN 1 ELSE 0 END)`),
           "deliveredOrdersCount",
@@ -107,40 +99,21 @@ export const getOrderStatisticsSequelize = async (req, res) => {
           literal(`SUM(CASE WHEN isDelivered = false THEN 1 ELSE 0 END)`),
           "notDeliveredOrdersCount",
         ],
-        [
-          literal(
-            `SUM(CASE WHEN isDelivered = true THEN total ELSE 0 END)`
-          ),
-          "totalReceivedMoney",
-        ],
-        [
-          literal(
-            `SUM(CASE WHEN isDelivered = false THEN total ELSE 0 END)`
-          ),
-          "totalPendingMoney",
-        ],
       ],
       raw: true,
     });
 
-    const result = stats[0] || {
-      totalRemainedMoney: 0,
-      totalOrdersCount: 0,
-      deliveredOrdersCount: 0,
-      notDeliveredOrdersCount: 0,
-      totalReceivedMoney: 0,
-      totalPendingMoney: 0,
-    };
+    const result = stats[0] || {};
 
     res.status(200).json({
       success: true,
       data: {
-        totalRemainedMoney: parseFloat(result.totalRemainedMoney) || 0,
-        deliveredOrdersCount: parseInt(result.deliveredOrdersCount) || 0,
-        notDeliveredOrdersCount: parseInt(result.notDeliveredOrdersCount) || 0,
+        totalOrdersCount: parseInt(result.totalOrdersCount) || 0,
+        totalIncome: parseFloat(result.totalIncome) || 0,
         totalReceivedMoney: parseFloat(result.totalReceivedMoney) || 0,
         totalPendingMoney: parseFloat(result.totalPendingMoney) || 0,
-        totalOrdersCount: parseInt(result.totalOrdersCount) || 0,
+        deliveredOrdersCount: parseInt(result.deliveredOrdersCount) || 0,
+        notDeliveredOrdersCount: parseInt(result.notDeliveredOrdersCount) || 0,
         timeRange: {
           startDate: startDate || null,
           endDate: endDate || null,
@@ -158,25 +131,24 @@ export const getOrderStatisticsSequelize = async (req, res) => {
   }
 };
 
-// Get detailed breakdown with additional metrics
 export const getDetailedOrderStatistics = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const { fn, col, literal } = Order.sequelize.Sequelize;
-
-    // Build where condition
     const whereCondition = {};
+
     if (startDate && endDate) {
       whereCondition.createdAt = {
         [Op.between]: [new Date(startDate), new Date(endDate)],
       };
     }
 
-    // Get overall statistics
+    // Overall stats
     const overallStats = await Order.findAll({
       where: whereCondition,
       attributes: [
-        [fn("SUM", col("total")), "totalRemainedMoney"],
+        [fn("SUM", col("total")), "totalIncome"],
+        [fn("SUM", col("recip")), "totalReceivedMoney"],
+        [fn("SUM", col("remained")), "totalPendingMoney"],
         [fn("COUNT", col("id")), "totalOrdersCount"],
         [fn("AVG", col("total")), "averageOrderValue"],
         [
@@ -187,36 +159,26 @@ export const getDetailedOrderStatistics = async (req, res) => {
           literal(`SUM(CASE WHEN isDelivered = false THEN 1 ELSE 0 END)`),
           "notDeliveredOrdersCount",
         ],
-        [
-          literal(
-            `SUM(CASE WHEN isDelivered = true THEN total ELSE 0 END)`
-          ),
-          "totalReceivedMoney",
-        ],
-        [
-          literal(
-            `SUM(CASE WHEN isDelivered = false THEN total ELSE 0 END)`
-          ),
-          "totalPendingMoney",
-        ],
       ],
       raw: true,
     });
 
-    // Get statistics by delivery status
+    // By delivery status
     const byDeliveryStatus = await Order.findAll({
       where: whereCondition,
       attributes: [
         "isDelivered",
         [fn("COUNT", col("id")), "count"],
         [fn("SUM", col("total")), "totalMoney"],
+        [fn("SUM", col("recip")), "receivedMoney"],
+        [fn("SUM", col("remained")), "pendingMoney"],
         [fn("AVG", col("total")), "averageValue"],
       ],
       group: ["isDelivered"],
       raw: true,
     });
 
-    // Get monthly breakdown (if time range is provided)
+    // Monthly breakdown
     let monthlyBreakdown = [];
     if (startDate && endDate) {
       monthlyBreakdown = await Order.findAll({
@@ -224,6 +186,9 @@ export const getDetailedOrderStatistics = async (req, res) => {
         attributes: [
           [fn("YEAR", col("createdAt")), "year"],
           [fn("MONTH", col("createdAt")), "month"],
+          [fn("SUM", col("total")), "totalMoney"],
+          [fn("SUM", col("recip")), "receivedMoney"],
+          [fn("SUM", col("remained")), "pendingMoney"],
           [
             literal(`SUM(CASE WHEN isDelivered = true THEN 1 ELSE 0 END)`),
             "deliveredCount",
@@ -232,19 +197,6 @@ export const getDetailedOrderStatistics = async (req, res) => {
             literal(`SUM(CASE WHEN isDelivered = false THEN 1 ELSE 0 END)`),
             "pendingCount",
           ],
-          [
-            literal(
-              `SUM(CASE WHEN isDelivered = true THEN total ELSE 0 END)`
-            ),
-            "deliveredMoney",
-          ],
-          [
-            literal(
-              `SUM(CASE WHEN isDelivered = false THEN total ELSE 0 END)`
-            ),
-            "pendingMoney",
-          ],
-          [fn("SUM", col("total")), "totalMoney"],
         ],
         group: ["year", "month"],
         order: [
@@ -255,28 +207,20 @@ export const getDetailedOrderStatistics = async (req, res) => {
       });
     }
 
-    const result = overallStats[0] || {
-      totalRemainedMoney: 0,
-      totalOrdersCount: 0,
-      averageOrderValue: 0,
-      deliveredOrdersCount: 0,
-      notDeliveredOrdersCount: 0,
-      totalReceivedMoney: 0,
-      totalPendingMoney: 0,
-    };
+    const result = overallStats[0] || {};
 
     res.status(200).json({
       success: true,
       data: {
-        totalRemainedMoney: parseFloat(result.totalRemainedMoney) || 0,
-        deliveredOrdersCount: parseInt(result.deliveredOrdersCount) || 0,
-        notDeliveredOrdersCount: parseInt(result.notDeliveredOrdersCount) || 0,
+        totalIncome: parseFloat(result.totalIncome) || 0,
         totalReceivedMoney: parseFloat(result.totalReceivedMoney) || 0,
         totalPendingMoney: parseFloat(result.totalPendingMoney) || 0,
         totalOrdersCount: parseInt(result.totalOrdersCount) || 0,
         averageOrderValue: parseFloat(result.averageOrderValue) || 0,
-        byDeliveryStatus: byDeliveryStatus,
-        monthlyBreakdown: monthlyBreakdown,
+        deliveredOrdersCount: parseInt(result.deliveredOrdersCount) || 0,
+        notDeliveredOrdersCount: parseInt(result.notDeliveredOrdersCount) || 0,
+        byDeliveryStatus,
+        monthlyBreakdown,
         timeRange: {
           startDate: startDate || null,
           endDate: endDate || null,

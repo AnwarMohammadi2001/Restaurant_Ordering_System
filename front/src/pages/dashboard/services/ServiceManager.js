@@ -120,16 +120,67 @@ export const payRemaining = async (order) => {
   }
 };
 export const updateOrderPayment = async (orderId, newRecip) => {
-  try {    
-    const response = await axios.post(
-      `${BASE_URL}/orders/pay/${orderId}`,
-      {
-        recip: newRecip,
-      }
-    );
+  try {
+    const response = await axios.post(`${BASE_URL}/orders/pay/${orderId}`, {
+      recip: newRecip,
+    });
     return response.data;
   } catch (error) {
     console.error("Error updating order payment:", error);
+    throw error;
+  }
+};
+export const updateOrderDeliveryStatus = async (orderId, isDelivered) => {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/orders/isDelivered/${orderId}`,
+      {
+        isDelivered,
+      }
+    );
+
+    Swal.fire({
+      icon: "success",
+      title: "وضعیت تحویل بروزرسانی شد",
+      text: response.data.message || "سفارش با موفقیت بروزرسانی شد.",
+      confirmButtonText: "تأیید",
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ Error updating delivery status:", error);
+
+    Swal.fire({
+      icon: "error",
+      title: "خطا در بروزرسانی",
+      text:
+        error.response?.data?.message ||
+        "خطایی در بروزرسانی وضعیت تحویل رخ داده است.",
+      confirmButtonText: "باشه",
+    });
+
+    throw error;
+  }
+};
+export const markOrderAsFullyPaid = async (orderId) => {
+  try {
+    const res = await axios.post(`${BASE_URL}/orders/markPaied/${orderId}`);
+    Swal.fire({
+      icon: "success",
+      title: "پرداخت کامل شد!",
+      text: "سفارش با موفقیت به عنوان پرداخت‌شده علامت‌گذاری شد.",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    return res.data;
+  } catch (error) {
+    console.error("Error marking order as paid:", error);
+    Swal.fire({
+      icon: "error",
+      title: "خطا در پرداخت",
+      text:
+        error.response?.data?.message || "خطایی در بروزرسانی پرداخت رخ داد.",
+    });
     throw error;
   }
 };
