@@ -9,7 +9,8 @@ import Swal from "sweetalert2";
 import { updateOrderPayment } from "../services/ServiceManager";
 import PrintOrderBill from "./PrintOrderBill";
 
-const OrderList = ({ refresh }) => {
+const OrderList = ({ refresh, onEditOrder }) => {
+  // Added onEditOrder prop
   const [orders, setOrders] = useState([]);
   const [isOpen, setIsOPen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState();
@@ -42,6 +43,13 @@ const OrderList = ({ refresh }) => {
   };
   const closeBill = () => {
     setIsOPen(!isOpen);
+  };
+
+  // Handle edit order
+  const handleEditOrder = (order) => {
+    if (onEditOrder) {
+      onEditOrder(order);
+    }
   };
 
   const handleMarkAsFullyPaid = async (orderId) => {
@@ -545,50 +553,66 @@ const OrderList = ({ refresh }) => {
                         </p>
                       </div>
                     </div>
-                    {/* Action Buttons */}
-                    {order.remained > 0 && (
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 border-t border-gray-200">
-                        <button
-                          onClick={() => handleMarkAsFullyPaid(order.id)}
-                          disabled={updatingOrderId === order.id}
-                          className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2 ${
-                            updatingOrderId === order.id
-                              ? "opacity-60 cursor-not-allowed"
-                              : ""
-                          }`}
-                        >
-                          <span>💳</span>
-                          {updatingOrderId === order.id
-                            ? "در حال پرداخت..."
-                            : "پرداخت کامل باقی‌مانده"}
-                        </button>
 
-                        {editingPayment !== order.id && (
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 border-t border-gray-200">
+                      {/* Edit Order Button */}
+                      <button
+                        onClick={() => handleEditOrder(order)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                      >
+                        <span>✏️</span>
+                        ویرایش سفارش
+                      </button>
+
+                      {/* Print Bill Button */}
+                      <button
+                        onClick={() => {
+                          setSelectedOrder(order), setIsOPen(!isOpen);
+                        }}
+                        className="bg-gradient-to-r from-cyan-700 to-cyan-800 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                      >
+                        چاپ بیل
+                      </button>
+
+                      {/* Payment Buttons */}
+                      {order.remained > 0 && (
+                        <>
                           <button
-                            onClick={() => handleEditPayment(order)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                            onClick={() => handleMarkAsFullyPaid(order.id)}
+                            disabled={updatingOrderId === order.id}
+                            className={`bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2 ${
+                              updatingOrderId === order.id
+                                ? "opacity-60 cursor-not-allowed"
+                                : ""
+                            }`}
                           >
-                            <span>✏️</span>
-                            ویرایش مبلغ دریافتی
+                            <span>💳</span>
+                            {updatingOrderId === order.id
+                              ? "در حال پرداخت..."
+                              : "پرداخت کامل باقی‌مانده"}
                           </button>
-                        )}
-                      </div>
-                    )}
+
+                          {editingPayment !== order.id && (
+                            <button
+                              onClick={() => handleEditPayment(order)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2"
+                            >
+                              <span>✏️</span>
+                              ویرایش مبلغ دریافتی
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+
                     {order.remained == 0 && (
-                      <div className="text-center p-4 bg-emerald-100 rounded-xl border border-emerald-200">
+                      <div className="text-center p-4 bg-emerald-100 rounded-xl border border-emerald-200 mt-4">
                         <p className="text-emerald-700 font-semibold text-lg">
                           ✅ این سفارش به طور کامل پرداخت شده است
                         </p>
                       </div>
-                    )}{" "}
-                    <button
-                      onClick={() => {
-                        setSelectedOrder(order), setIsOPen(!isOpen);
-                      }}
-                      className={`bg-gradient-to-r from-cyan-700 to-cyan-800 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2 `}
-                    >
-                      چاپ بیل
-                    </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getMenuItems } from "../services/MenuService";
-import { createOrder } from "../services/ServiceManager";
+import { createOrder, updateOrder } from "../services/ServiceManager"; // Added updateOrder import
 import OrderList from "./OrderList";
 
 const Orders = () => {
@@ -9,7 +9,7 @@ const Orders = () => {
   const [customerName, setCustomerName] = useState("");
   const [orders, setOrders] = useState([
     {
-      id: Date.now(), // Add unique ID
+      id: Date.now(),
       category: "",
       menuItemId: "",
       menuItem: "",
@@ -21,6 +21,8 @@ const Orders = () => {
   const [refreshOrders, setRefreshOrders] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("create");
+  const [editingOrderId, setEditingOrderId] = useState(null); // Track which order is being edited
+  const [isEditMode, setIsEditMode] = useState(false); // Track if we're in edit mode
 
   // Fetch all menu items
   useEffect(() => {
@@ -40,15 +42,15 @@ const Orders = () => {
     fetchMenu();
   }, []);
 
-  // Handle order changes - FIXED VERSION
+  // Handle order changes
   const handleOrderChange = (index, e) => {
     const { name, value } = e.target;
-    
-    setOrders(prevOrders => {
+
+    setOrders((prevOrders) => {
       const updatedOrders = [...prevOrders];
       updatedOrders[index] = {
         ...updatedOrders[index],
-        [name]: value
+        [name]: value,
       };
 
       if (name === "category") {
@@ -61,12 +63,12 @@ const Orders = () => {
     });
   };
 
-  // Add order line - FIXED VERSION
+  // Add order line
   const handleAddOrder = () => {
-    setOrders(prevOrders => [
+    setOrders((prevOrders) => [
       ...prevOrders,
       {
-        id: Date.now(), // Add unique ID
+        id: Date.now(),
         category: "",
         menuItemId: "",
         menuItem: "",
@@ -77,35 +79,31 @@ const Orders = () => {
     ]);
   };
 
-  // Remove order line - FIXED VERSION
+  // Remove order line
   const handleRemoveOrder = (index) => {
     if (orders.length > 1) {
-      setOrders(prevOrders => prevOrders.filter((_, i) => i !== index));
+      setOrders((prevOrders) => prevOrders.filter((_, i) => i !== index));
     }
   };
 
-  // Submit order
+  // Submit order (create or update)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       const payload = { customerName, orders };
-      await createOrder(payload);
 
-      // Success state
-      setCustomerName("");
-      setOrders([
-        {
-          id: Date.now(),
-          category: "",
-          menuItemId: "",
-          menuItem: "",
-          amount: "",
-          price: "",
-          note: "",
-        },
-      ]);
+      if (isEditMode && editingOrderId) {
+        // Update existing order
+        await updateOrder(editingOrderId, payload);
+      } else {
+        // Create new order
+        await createOrder(payload);
+      }
+
+      // Reset form after successful submission
+      resetForm();
 
       setRefreshOrders((prev) => !prev);
       setActiveTab("orders");
@@ -113,7 +111,9 @@ const Orders = () => {
       // Show success message
       const submitBtn = e.target.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
-      submitBtn.textContent = "✓ سفارش ایجاد شد!";
+      submitBtn.textContent = isEditMode
+        ? "✓ سفارش بروز شد!"
+        : "✓ سفارش ایجاد شد!";
       submitBtn.classList.add("bg-emerald-600");
 
       setTimeout(() => {
@@ -136,6 +136,55 @@ const Orders = () => {
     }
   };
 
+  // Reset form to initial state
+  const resetForm = () => {
+    setCustomerName("");
+    setOrders([
+      {
+        id: Date.now(),
+        category: "",
+        menuItemId: "",
+        menuItem: "",
+        amount: "",
+        price: "",
+        note: "",
+      },
+    ]);
+    setEditingOrderId(null);
+    setIsEditMode(false);
+  };
+
+  // Cancel editing and reset form
+  const handleCancelEdit = () => {
+    resetForm();
+  };
+
+  // Load order data for editing
+  // In your Orders component, replace the handleEditOrder function with this:
+
+  // Load order data for editing
+  const handleEditOrder = (orderData) => {
+    setEditingOrderId(orderData.id);
+    setIsEditMode(true);
+    setCustomerName(orderData.customerName);
+
+    // Check if order items are in orderData.orders or orderData.items
+    const orderItems = (orderData.orders || orderData.items || []).map(
+      (item, index) => ({
+        id: Date.now() + index, // Generate new unique IDs for form items
+        category: item.category || "",
+        menuItemId: item.menuItemId || item.id?.toString() || "",
+        menuItem: item.menuItem || item.name || "",
+        amount: item.amount?.toString() || item.quantity?.toString() || "",
+        price: item.price?.toString() || "",
+        note: item.note || "",
+      })
+    );
+
+    setOrders(orderItems);
+    setActiveTab("create");
+  };
+
   // Calculate total
   const calculateTotal = () => {
     return orders
@@ -155,17 +204,27 @@ const Orders = () => {
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-sm border border-white/20">
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => setActiveTab("create")}
+                onClick={() => {
+                  setActiveTab("create");
+                  if (activeTab === "create" && isEditMode) {
+                    resetForm();
+                  }
+                }}
                 className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
                   activeTab === "create"
                     ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-200"
                     : "text-slate-600 hover:bg-white/50"
                 }`}
               >
-                سفارش جدید
+                {isEditMode ? "ویرایش سفارش" : "سفارش جدید"}
               </button>
               <button
-                onClick={() => setActiveTab("orders")}
+                onClick={() => {
+                  setActiveTab("orders");
+                  if (isEditMode) {
+                    resetForm();
+                  }
+                }}
                 className={`py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
                   activeTab === "orders"
                     ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-200"
@@ -179,7 +238,7 @@ const Orders = () => {
         </div>
 
         <div className="">
-          {/* Order Creation Card - Hidden on mobile when viewing orders */}
+          {/* Order Creation/Editing Card */}
           <div
             className={`bg-white overflow-hidden border border-white/20 backdrop-blur-sm transform transition-all duration-500 ${
               activeTab === "create" ? "block" : "hidden lg:block"
@@ -190,17 +249,25 @@ const Orders = () => {
             }`}
           >
             {/* Card Header */}
-            <div className="relative bg-cyan-800 p-6 md:p-4">
+            <div
+              className={`relative p-6 md:p-4 ${
+                isEditMode ? "bg-amber-600" : "bg-cyan-800"
+              }`}
+            >
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                    <span className="text-2xl">📝</span>
+                    <span className="text-2xl">{isEditMode ? "✏️" : "📝"}</span>
                   </div>
                   <div>
                     <h2 className="text-2xl md:text-3xl font-bold text-white">
-                      ایجاد سفارش
+                      {isEditMode ? "ویرایش سفارش" : "ایجاد سفارش"}
                     </h2>
-                    <p className="text-blue-100">سفارش جدید مشتری را اضافه کنید</p>
+                    <p className="text-blue-100">
+                      {isEditMode
+                        ? "سفارش انتخاب شده را ویرایش کنید"
+                        : "سفارش جدید مشتری را اضافه کنید"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -210,7 +277,11 @@ const Orders = () => {
               {/* Customer Name */}
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isEditMode ? "bg-amber-500" : "bg-blue-500"
+                    }`}
+                  ></span>
                   نام مشتری
                 </label>
                 <div className="relative group">
@@ -229,7 +300,11 @@ const Orders = () => {
               <div className="space-y-5">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isEditMode ? "bg-amber-500" : "bg-purple-500"
+                      }`}
+                    ></span>
                     آیتم‌های سفارش
                   </h3>
                   <span className="text-sm font-medium bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
@@ -294,7 +369,7 @@ const Orders = () => {
                                 (item) => item.id.toString() === id
                               );
                               if (selected) {
-                                setOrders(prevOrders => {
+                                setOrders((prevOrders) => {
                                   const updatedOrders = [...prevOrders];
                                   updatedOrders[index] = {
                                     ...updatedOrders[index],
@@ -377,7 +452,8 @@ const Orders = () => {
                               {(
                                 (parseFloat(order.price) || 0) *
                                 (parseInt(order.amount) || 0)
-                              ).toFixed(2)} افغانی
+                              ).toFixed(2)}{" "}
+                              افغانی
                             </div>
                           </div>
                         </div>
@@ -431,17 +507,34 @@ const Orders = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-4">
+              <div className="flex gap-4">
+                {isEditMode && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="flex-1 bg-slate-500 text-white py-4 rounded-2xl font-bold hover:bg-slate-600 focus:ring-4 focus:ring-slate-200 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    انصراف
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-2xl font-bold hover:from-blue-700 hover:to-purple-700 focus:ring-4 focus:ring-blue-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                  className={`flex-1 bg-gradient-to-r text-white py-4 rounded-2xl font-bold focus:ring-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] ${
+                    isEditMode
+                      ? "from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 focus:ring-amber-200"
+                      : "from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:ring-blue-200"
+                  }`}
                 >
                   {isSubmitting ? (
                     <div className="flex items-center justify-center gap-3">
                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      در حال پردازش سفارش...
+                      {isEditMode
+                        ? "در حال بروزرسانی..."
+                        : "در حال پردازش سفارش..."}
                     </div>
+                  ) : isEditMode ? (
+                    "بروزرسانی سفارش"
                   ) : (
                     "ثبت سفارش"
                   )}
@@ -450,7 +543,7 @@ const Orders = () => {
             </form>
           </div>
 
-          {/* Order List - Hidden on mobile when creating order */}
+          {/* Order List */}
           <div
             className={`bg-white overflow-hidden border border-white/20 backdrop-blur-sm transform transition-all duration-500 ${
               activeTab === "orders" ? "block" : "hidden lg:block"
@@ -468,15 +561,22 @@ const Orders = () => {
                     <span className="text-2xl">📋</span>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-white">لیست سفارش‌ها</h2>
-                    <p className="text-blue-100">نمایش آخرین سفارش‌های مشتریان</p>
+                    <h2 className="text-2xl font-bold text-white">
+                      لیست سفارش‌ها
+                    </h2>
+                    <p className="text-blue-100">
+                      نمایش آخرین سفارش‌های مشتریان
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="">
-              <OrderList refresh={refreshOrders} />
+              <OrderList
+                refresh={refreshOrders}
+                onEditOrder={handleEditOrder} // Pass edit handler to OrderList
+              />
             </div>
           </div>
         </div>

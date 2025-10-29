@@ -1,4 +1,68 @@
 import { Order, OrderItem } from "../Models/associations.js";
+export const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params; // Order ID from URL
+    const { recip, orders } = req.body; // recip and optional new items
+
+    // 1️⃣ Find existing order
+    const order = await Order.findByPk(id, {
+      include: [{ model: OrderItem, as: "items" }],
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // 2️⃣ Update order items if new ones are provided
+    if (orders && Array.isArray(orders)) {
+      // Delete old items
+      await OrderItem.destroy({ where: { orderId: id } });
+
+      // Recreate new items
+      const itemsData = orders.map((item) => ({
+        orderId: id,
+        category: item.category,
+        menuItemId: item.menuItemId,
+        menuItem: item.menuItem,
+        amount: item.amount,
+        price: item.price,
+        note: item.note,
+      }));
+
+      await OrderItem.bulkCreate(itemsData);
+    }
+
+    // 3️⃣ Fetch updated items
+    const updatedItems = await OrderItem.findAll({ where: { orderId: id } });
+
+    // 4️⃣ Recalculate total and remained
+    const total = updatedItems.reduce(
+      (sum, item) => sum + Number(item.price) * Number(item.amount),
+      0
+    );
+
+    const updatedRecip = recip !== undefined ? recip : order.recip;
+    const remained = total - updatedRecip;
+
+    // 5️⃣ Update the main order
+    await order.update({ total, recip: updatedRecip, remained });
+
+    // 6️⃣ Return full updated order with items
+    const updatedOrder = await Order.findByPk(id, {
+      include: [{ model: OrderItem, as: "items" }],
+    });
+
+    res.status(200).json({
+      message: "Order updated successfully",
+      order: updatedOrder,
+    });
+  } catch (err) {
+    console.error("Error updating order:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to update order", error: err.message });
+  }
+};
 
 export const createOrder = async (req, res) => {
   try {
