@@ -333,7 +333,7 @@ const Orders = () => {
                         </button>
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-6 gap-1">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-1">
                         {/* Category */}
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-slate-700">
@@ -406,7 +406,7 @@ const Orders = () => {
                                 value={order.price}
                                 onChange={(e) => handleOrderChange(index, e)}
                                 placeholder="0.00"
-                                className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 focus:ring-3 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white"
+                                className="w-[150px] border border-slate-200 rounded-xl pl-4 pr-10 py-3.5 focus:ring-3 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white"
                                 step="0.01"
                                 min="0"
                                 required
@@ -431,7 +431,7 @@ const Orders = () => {
                                 value={order.amount}
                                 onChange={(e) => handleOrderChange(index, e)}
                                 placeholder="0"
-                                className="w-full border border-slate-200 rounded-xl pl-4 pr-10 py-3 focus:ring-3 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white"
+                                className="w-[150px] border border-slate-200 rounded-xl pl-4 pr-10 py-3.5 focus:ring-3 focus:ring-blue-100 focus:border-blue-400 transition-all duration-300 bg-white"
                                 min="1"
                                 required
                               />
@@ -448,7 +448,7 @@ const Orders = () => {
                             <label className="block text-sm font-medium text-slate-700">
                               مجموع خط
                             </label>
-                            <div className="w-full border-2 border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3 text-emerald-700 font-bold text-center">
+                            <div className="w-[150px] border-2 border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3.5 text-emerald-700 font-bold text-center">
                               {(
                                 (parseFloat(order.price) || 0) *
                                 (parseInt(order.amount) || 0)
@@ -459,7 +459,7 @@ const Orders = () => {
                         </div>
 
                         {/* Note */}
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="space-y-2 md:col-span-1">
                           <label className="block text-sm font-medium text-slate-700">
                             یادداشت
                           </label>
