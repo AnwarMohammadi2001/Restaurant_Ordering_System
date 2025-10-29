@@ -345,7 +345,7 @@ const OrdersList = () => {
                       >
                         <FaEye className="text-cyan-800" size={20} />
                       </button>
-                      {/* <button
+                      <button
                         onClick={async () => {
                           try {
                             const updated = await handleEditOrder(order);
@@ -360,7 +360,7 @@ const OrdersList = () => {
                       >
                         <FaEdit className="text-sm" />
                         ویرایش
-                      </button> */}
+                      </button>
                       <button
                         onClick={async () => {
                           try {

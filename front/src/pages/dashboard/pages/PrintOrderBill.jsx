@@ -2,17 +2,9 @@ import React, { useEffect } from "react";
 import moment from "moment-jalaali";
 import { FaPhone, FaPrint, FaTimes } from "react-icons/fa";
 
-const PrintOrderBill = ({ isOpen, onClose, order, autoPrint }) => {
+const PrintOrderBill = ({ isOpen, onClose, order }) => {
   if (!isOpen || !order) return null;
 
-  useEffect(() => {
-    if (autoPrint && isOpen) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [autoPrint, isOpen]);
 
   const formatCurrency = (num) => {
     const number = Number(num || 0);
@@ -174,7 +166,7 @@ const PrintOrderBill = ({ isOpen, onClose, order, autoPrint }) => {
       </div>
 
       {/* Action Buttons */}
-      {!autoPrint && (
+      {(
         <div className="absolute bottom-6 left-6 flex gap-3 print:hidden">
           <button
             onClick={onClose}

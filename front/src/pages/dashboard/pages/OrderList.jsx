@@ -7,9 +7,12 @@ import {
 } from "../services/ServiceManager";
 import Swal from "sweetalert2";
 import { updateOrderPayment } from "../services/ServiceManager";
+import PrintOrderBill from "./PrintOrderBill";
 
 const OrderList = ({ refresh }) => {
   const [orders, setOrders] = useState([]);
+  const [isOpen, setIsOPen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedOrder, setExpandedOrder] = useState(null);
@@ -36,6 +39,9 @@ const OrderList = ({ refresh }) => {
 
   const toggleOrder = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  };
+  const closeBill = () => {
+    setIsOPen(!isOpen);
   };
 
   const handleMarkAsFullyPaid = async (orderId) => {
@@ -539,7 +545,6 @@ const OrderList = ({ refresh }) => {
                         </p>
                       </div>
                     </div>
-
                     {/* Action Buttons */}
                     {order.remained > 0 && (
                       <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 border-t border-gray-200">
@@ -569,14 +574,21 @@ const OrderList = ({ refresh }) => {
                         )}
                       </div>
                     )}
-
                     {order.remained == 0 && (
                       <div className="text-center p-4 bg-emerald-100 rounded-xl border border-emerald-200">
                         <p className="text-emerald-700 font-semibold text-lg">
                           ✅ این سفارش به طور کامل پرداخت شده است
                         </p>
                       </div>
-                    )}
+                    )}{" "}
+                    <button
+                      onClick={() => {
+                        setSelectedOrder(order), setIsOPen(!isOpen);
+                      }}
+                      className={`bg-gradient-to-r from-cyan-700 to-cyan-800 text-white px-6 py-3 rounded-lg shadow-md transition-all duration-300 font-semibold flex items-center justify-center gap-2 `}
+                    >
+                      چاپ بیل
+                    </button>
                   </div>
                 </div>
               </div>
@@ -584,6 +596,16 @@ const OrderList = ({ refresh }) => {
           </div>
         ))}
       </div>
+      {isOpen && (
+        <div className="relative ">
+          {" "}
+          <PrintOrderBill
+            isOpen={isOpen}
+            onClose={closeBill}
+            order={selectedOrder}
+          />
+        </div>
+      )}
     </div>
   );
 };
